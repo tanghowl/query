@@ -10,27 +10,30 @@ def qstatJR(jobid, state):
 		if qj.startswith('sge_o_workdir'):
 			path = qj.strip().split()[1]
 		if qj.startswith('hard resource_list'):
-			P = re.search('num_proc=(\d+)', qj.strip()).group(1)
-			VF = re.search('virtual_free=(\d+)', qj.strip()).group(1)+'G'
+			Pre = re.search('num_proc=(\d+)', qj.strip())
+			if Pre: P = Pre.group(1)
+			VFre = re.search('virtual_free=(.+)[Gg]', qj.strip())
+			if VFre: VF = VFre.group(1)+'G'
 		if qj.startswith('job_name'):
 			job_name = qj.strip().split()[1]
 			CMD = path+'/'+job_name
 		if qj.startswith('usage'):
-			CPU = re.search('cpu=([\d:]*),', qj.strip()).group(1)
-			vmem = re.search('vmem=(.*)([GMA]),', qj.strip())
-			Mnow = shift_unit(vmem)
-			maxvmem = re.search('maxvmem=(.*)([GMA])', qj.strip())
-			Mmax = shift_unit(maxvmem)
+			CPUre = re.search('cpu=([\d:]*),', qj.strip())
+			if CPUre: CPU = CPUre.group(1)
+			vmemre = re.search('vmem=(.*)([GMA]),', qj.strip())
+			if vmemre: Mnow = shift_unit(vmemre)
+			maxvmemre = re.search('maxvmem=(.*)([GMA])', qj.strip())
+			if maxvmemre: Mmax = shift_unit(maxvmemre)
+	if not 'Mnow' in dir(): Mnow = '0G'
+	if not 'Mmax' in dir(): Mmax = '0G'
+	if not 'VF' in dir(): VF = '0G'
+	if not 'P' in dir(): P = '-'
+	if not 'CPU' in dir(): CPU = '-'
 	if state == 'r' and (Mnow != 'NA' or Mmax != 'NA'):
 		if float(Mnow[:-1]) > float(VF[:-1]):
 			VF = '**'+VF
 		elif float(Mmax[:-1]) > float(VF[:-1]):
 			VF = '*'+VF
-	if not 'VF' in dir(): VF = '-'
-	if not 'P' in dir(): P = '-'
-	if not 'CPU' in dir(): CPU = '-'
-	if not 'Mmax' in dir(): Mmax = '-'
-	if not 'Mnow' in dir(): Mnow = '-'
 	return P, CPU, Mnow, Mmax, VF, CMD, user
 
 def shift_unit(research):
@@ -45,6 +48,8 @@ def shift_unit(research):
 def read_infor(user):
 	if user == 'myself':
 		qstat = os.popen('qstat').read()
+	elif user == 'all':
+		qstat = os.popen("qstat -u '*'").read()
 	else:
 		qstat = os.popen('qstat -u {u}'.format(u = user)).read()
 	allinfor = {i.strip().split()[0]:i for i in qstat.strip().split('\n')[2:]}
@@ -73,7 +78,7 @@ def deal_infor(allinfor):
 
 def Parser_args():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-u', default = 'myself', metavar = '', help = 'User')
+	parser.add_argument('-u', default = 'myself', metavar = '', help = 'User or "all"')
 	args = parser.parse_args()
 	return args
 

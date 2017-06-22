@@ -1,9 +1,16 @@
 #! /usr/bin/env python
+# Author: Tang Hao
+# mail: tanghao@genebang.com
 
 import os, datetime, re, argparse
 
 def qstatJR(jobid, state):
 	QJs = os.popen('qstat -j {id}'.format(id = jobid)).readlines()
+	Mnow = '0G'
+	Mmax = '0G'
+	VF = '0G'
+	P = '-'
+	CPU = '-'
 	for qj in QJs:
 		if qj.startswith('owner'):
 			user = qj.strip().split()[1]
@@ -24,11 +31,6 @@ def qstatJR(jobid, state):
 			if vmemre: Mnow = shift_unit(vmemre)
 			maxvmemre = re.search('maxvmem=(.*)([GMA])', qj.strip())
 			if maxvmemre: Mmax = shift_unit(maxvmemre)
-	if not 'Mnow' in dir(): Mnow = '0G'
-	if not 'Mmax' in dir(): Mmax = '0G'
-	if not 'VF' in dir(): VF = '0G'
-	if not 'P' in dir(): P = '-'
-	if not 'CPU' in dir(): CPU = '-'
 	if state == 'r' and (Mnow != 'NA' or Mmax != 'NA'):
 		if float(Mnow[:-1]) > float(VF[:-1]):
 			VF = '**'+VF
